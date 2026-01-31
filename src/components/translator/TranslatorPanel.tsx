@@ -1,9 +1,33 @@
 import { useRef, useEffect } from "react";
-import { Copy, Volume2, Loader2 } from "lucide-react";
+import { Copy, Volume2, Loader2, Mic, MicOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { LanguageSelector } from "./LanguageSelector";
 import { toast } from "sonner";
+import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import { cn } from "@/lib/utils";
+
+// Language code mapping from ISO 639-1 to BCP 47 for speech recognition
+const getRecognitionLanguage = (langCode: string): string => {
+  const mapping: Record<string, string> = {
+    en: "en-US",
+    es: "es-ES",
+    fr: "fr-FR",
+    de: "de-DE",
+    it: "it-IT",
+    pt: "pt-PT",
+    ru: "ru-RU",
+    ja: "ja-JP",
+    ko: "ko-KR",
+    zh: "zh-CN",
+    ar: "ar-SA",
+    hi: "hi-IN",
+    nl: "nl-NL",
+    pl: "pl-PL",
+    tr: "tr-TR",
+  };
+  return mapping[langCode] || `${langCode}-${langCode.toUpperCase()}`;
+};
 
 interface TranslatorPanelProps {
   type: "input" | "output";
@@ -25,6 +49,21 @@ export function TranslatorPanel({
   autoFocus = false,
 }: TranslatorPanelProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isInput = type === "input";
+  const isOutput = type === "output";
+
+  const { isListening, isSupported, startListening, stopListening } = useSpeechRecognition({
+    language: getRecognitionLanguage(language),
+    continuous: true,
+    onResult: (transcript) => {
+      if (onChange && isInput) {
+        onChange(value + (value ? " " : "") + transcript);
+      }
+    },
+    onError: (error) => {
+      toast.error(error);
+    },
+  });
 
   useEffect(() => {
     if (autoFocus && textareaRef.current) {
@@ -49,7 +88,6 @@ export function TranslatorPanel({
       return;
     }
 
-    // Cancel any ongoing speech
     window.speechSynthesis.cancel();
 
     const utterance = new SpeechSynthesisUtterance(value);
@@ -63,7 +101,13 @@ export function TranslatorPanel({
     window.speechSynthesis.speak(utterance);
   };
 
-  const isOutput = type === "output";
+  const handleMicClick = () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening();
+    }
+  };
 
   return (
     <div className="flex flex-col gap-3 flex-1 min-w-0">
@@ -78,7 +122,7 @@ export function TranslatorPanel({
           value={value}
           onChange={onChange ? (e) => onChange(e.target.value) : undefined}
           readOnly={isOutput}
-          placeholder={isOutput ? "Translation will appear here..." : "Enter text to translate..."}
+          placeholder={isOutput ? "Translation will appear here..." : "Enter text or use microphone..."}
           className="h-full min-h-[150px] md:min-h-[200px] resize-none text-base leading-relaxed"
           aria-label={isOutput ? "Translated text" : "Text to translate"}
         />
@@ -88,6 +132,30 @@ export function TranslatorPanel({
           </div>
         )}
       </div>
+      
+      {/* Input panel buttons */}
+      {isInput && isSupported && (
+        <div className="flex gap-2 justify-end">
+          <Button
+            variant={isListening ? "destructive" : "outline"}
+            size="icon"
+            onClick={handleMicClick}
+            aria-label={isListening ? "Stop recording" : "Start voice input"}
+            className={cn(
+              "h-10 w-10 transition-all",
+              isListening && "animate-pulse"
+            )}
+          >
+            {isListening ? (
+              <MicOff className="h-4 w-4" />
+            ) : (
+              <Mic className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+      )}
+
+      {/* Output panel buttons */}
       {isOutput && (
         <div className="flex gap-2 justify-end">
           <Button
