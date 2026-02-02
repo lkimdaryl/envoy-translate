@@ -40,15 +40,24 @@ export function useSpeechRecognition({
 
   // Initialize recognition once
   useEffect(() => {
-    if (!isSupported) return;
+    if (!isSupported) {
+      console.log("Speech recognition not supported");
+      return;
+    }
 
+    console.log("Initializing speech recognition...");
     const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     recognitionRef.current = new SpeechRecognitionAPI();
     recognitionRef.current.continuous = continuous;
     recognitionRef.current.interimResults = true;
     recognitionRef.current.lang = language;
 
+    recognitionRef.current.onstart = () => {
+      console.log("Speech recognition started");
+    };
+
     recognitionRef.current.onresult = (event: any) => {
+      console.log("Speech recognition result:", event.results);
       let finalTranscript = "";
       let interimTranscript = "";
 
@@ -62,9 +71,11 @@ export function useSpeechRecognition({
       }
 
       const currentTranscript = finalTranscript || interimTranscript;
+      console.log("Transcript:", { final: finalTranscript, interim: interimTranscript, current: currentTranscript });
       setTranscript(currentTranscript);
       
       if (finalTranscript && onResultRef.current) {
+        console.log("Calling onResult with:", finalTranscript);
         onResultRef.current(finalTranscript);
       }
     };
@@ -85,6 +96,7 @@ export function useSpeechRecognition({
     };
 
     recognitionRef.current.onend = () => {
+      console.log("Speech recognition ended");
       setIsListening(false);
     };
 
@@ -93,7 +105,7 @@ export function useSpeechRecognition({
         recognitionRef.current.abort();
       }
     };
-  }, [isSupported, continuous]); // Removed language from deps - handled separately
+  }, [isSupported, continuous, language]); // Added language back to reinitialize with correct lang
 
   // Update language when it changes
   useEffect(() => {
@@ -103,12 +115,14 @@ export function useSpeechRecognition({
   }, [language]);
 
   const startListening = useCallback(() => {
+    console.log("startListening called, recognitionRef:", !!recognitionRef.current, "isListening:", isListening);
     if (!recognitionRef.current || isListening) return;
     
     setTranscript("");
     try {
       recognitionRef.current.start();
       setIsListening(true);
+      console.log("Recognition started successfully");
     } catch (error) {
       console.error("Failed to start speech recognition:", error);
     }
