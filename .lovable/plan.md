@@ -1,85 +1,55 @@
 
+# UI Layout Rearrangement Plan
 
-# Language Translator App - Implementation Plan
+## Target Layout (from mockup)
 
-## Overview
-A modern, mobile-first language translator with auto-translation, dark mode, and speech capabilities using the MyMemory API.
+```text
++----------------------------------+
+|  Translator              [☀️]    |  <- Header with theme toggle
+|                  [Auto-translate]|  <- Toggle below header
+|                                  |
+| [English]  ⟷  [Spanish]         |  <- Language selectors in row
+|                                  |
+| +------------------------------+ |
+| |                              | |  <- Input textarea
+| |                        [🎤] | |  <- Mic icon inside
+| +------------------------------+ |
+|                                  |
+|      [ Translate ]               |  <- Translate button
+|                                  |
+| +------------------------------+ |
+| |                              | |  <- Output textarea
+| |                              | |
+| +------------------------------+ |
+|                                  |
++----------------------------------+
+```
 
----
+## Changes Required
 
-## 1. Core Layout & Structure
+### 1. Translator.tsx - Main Layout Changes
+- Move auto-translate toggle directly below the header (right-aligned)
+- Create a new row for language selectors with swap button between them
+- Stack input panel, translate button, and output panel vertically
+- Remove the side-by-side desktop layout for language panels
 
-### Mobile View (Stacked)
-- **Header** with app title and dark mode toggle
-- **Input Section**: Language dropdown + expandable textarea
-- **Swap Button**: Centered, prominent icon button
-- **Output Section**: Language dropdown + read-only textarea with utility icons
-- **Translate Button**: Full-width, primary call-to-action
+### 2. TranslatorPanel.tsx - Simplify Component
+- Remove the language selector from this component (moved to parent)
+- Position microphone button inside/overlaid on the input textarea
+- Keep copy/speak buttons for output panel
 
-### Desktop View (Side-by-Side)
-- Two-column layout with input on left, output on right
-- Swap button centered between columns
-- More compact utility buttons
+### 3. LanguageSelector.tsx - No changes needed
+- Component already works standalone
 
----
+## Technical Details
 
-## 2. Features & Components
+**File: `src/components/translator/Translator.tsx`**
+- Restructure JSX to match mockup layout
+- Create language selector row with: `[FromLang] [SwapBtn] [ToLang]`
+- Auto-translate toggle moved to top-right under header
+- Translate button between input and output sections
 
-### Language Selection
-- Two dropdowns with 50+ languages (English, Spanish, French, German, etc.)
-- Human-readable names with ISO 639-1 codes under the hood
-- Last selected languages saved to localStorage
-
-### Translation Controls
-- **Auto-translate toggle**: On by default, translates as you type (500ms debounce)
-- **Manual translate button**: Always available for explicit translation
-- Loading spinner during API requests
-
-### Output Utilities
-- **Copy button**: Copies translation to clipboard with success feedback
-- **Listen button**: Reads translation aloud using Web Speech API
-- Visual feedback (toast notifications) for actions
-
-### Error Handling
-- Friendly error messages for network issues
-- API rate limit warnings
-- Empty state handling
-
----
-
-## 3. Design & UX
-
-### Visual Style
-- Clean, minimalist design with subtle shadows and rounded corners
-- Consistent color palette with primary accent color
-- Dark mode toggle with smooth transitions
-
-### Accessibility
-- Semantic HTML structure
-- ARIA labels for icon buttons
-- Keyboard navigation support
-- Focus management (auto-focus input on load)
-
-### Responsiveness
-- Mobile-first Tailwind classes
-- Fluid typography and spacing
-- Touch-friendly tap targets (min 44px)
-
----
-
-## 4. Performance Optimizations
-
-- **Debounced input**: 500ms delay before auto-translation
-- **AbortController**: Cancels stale API requests
-- **localStorage**: Persists language preferences
-- Efficient re-renders with proper React state management
-
----
-
-## Tech Stack
-- React with TypeScript
-- Tailwind CSS for styling
-- MyMemory Translation API (free, no key required)
-- Web Speech API for text-to-speech
-- Sonner for toast notifications (already installed)
-
+**File: `src/components/translator/TranslatorPanel.tsx`**
+- Add new prop to hide language selector (or create separate textarea component)
+- Position mic button as an overlay inside the textarea (bottom-right)
+- Adjust padding/positioning for the overlay button
