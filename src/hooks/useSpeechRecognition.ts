@@ -24,7 +24,7 @@ export function useSpeechRecognition({
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState("");
   const recognitionRef = useRef<any>(null);
-  const processedIndicesRef = useRef<Set<number>>(new Set());
+  const lastSentTextRef = useRef("");
   
   // Use refs for callbacks to avoid recreating recognition instance
   const onResultRef = useRef(onResult);
@@ -59,31 +59,33 @@ export function useSpeechRecognition({
 
     recognitionRef.current.onresult = (event: any) => {
       console.log("Speech recognition result:", event.results);
-      let newFinalTranscript = "";
-      let interimTranscript = "";
+      let allFinalText = "";
+      let interimText = "";
 
       for (let i = 0; i < event.results.length; i++) {
         const result = event.results[i];
         if (result.isFinal) {
-          // Only process results we haven't seen yet
-          if (!processedIndicesRef.current.has(i)) {
-            newFinalTranscript += result[0].transcript;
-            processedIndicesRef.current.add(i);
-          }
+          allFinalText += result[0].transcript;
         } else {
-          interimTranscript += result[0].transcript;
+          interimText += result[0].transcript;
         }
       }
 
-      // Show interim transcript for live feedback
-      const displayTranscript = interimTranscript || newFinalTranscript;
-      console.log("Transcript:", { newFinal: newFinalTranscript, interim: interimTranscript, display: displayTranscript });
-      setTranscript(displayTranscript);
+      // Display current state
+      setTranscript(allFinalText + interimText);
       
-      // Only send NEW final transcript to callback
-      if (newFinalTranscript && onResultRef.current) {
-        console.log("Calling onResult with:", newFinalTranscript);
-        onResultRef.current(newFinalTranscript);
+      // Only send NEW final text (compare with what we already sent)
+      if (allFinalText && allFinalText !== lastSentTextRef.current) {
+        const newText = allFinalText.startsWith(lastSentTextRef.current) 
+          ? allFinalText.substring(lastSentTextRef.current.length)
+          : allFinalText;
+        
+        console.log("New text to send:", newText, "Previous:", lastSentTextRef.current);
+        lastSentTextRef.current = allFinalText;
+        
+        if (newText.trim() && onResultRef.current) {
+          onResultRef.current(newText.trim());
+        }
       }
     };
 
@@ -126,7 +128,7 @@ export function useSpeechRecognition({
     if (!recognitionRef.current || isListening) return;
     
     // Reset tracking for new session
-    processedIndicesRef.current.clear();
+    lastSentTextRef.current = "";
     setTranscript("");
     try {
       recognitionRef.current.start();
