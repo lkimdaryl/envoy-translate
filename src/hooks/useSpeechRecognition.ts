@@ -17,14 +17,15 @@ interface UseSpeechRecognitionReturn {
 
 export function useSpeechRecognition({
   language = "en-US",
-  continuous = true,
+  continuous = false, // Changed to false to prevent duplicate results
   onResult,
   onError,
 }: UseSpeechRecognitionOptions = {}): UseSpeechRecognitionReturn {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState("");
   const recognitionRef = useRef<any>(null);
-  const lastSentTextRef = useRef("");
+  const isListeningRef = useRef(false); // Ref to prevent double-starts
+  const lastResultIndexRef = useRef(-1); // Track last processed result index
   
   // Use refs for callbacks to avoid recreating recognition instance
   const onResultRef = useRef(onResult);
@@ -39,7 +40,7 @@ export function useSpeechRecognition({
   const isSupported = typeof window !== "undefined" && 
     ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
 
-  // Initialize recognition once
+  // Initialize recognition once (without language in deps to avoid re-init)
   useEffect(() => {
     if (!isSupported) {
       console.log("Speech recognition not supported");
@@ -50,53 +51,44 @@ export function useSpeechRecognition({
     const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     recognitionRef.current = new SpeechRecognitionAPI();
     recognitionRef.current.continuous = continuous;
-    recognitionRef.current.interimResults = true;
+    recognitionRef.current.interimResults = false; // Only get final results to prevent duplicates
     recognitionRef.current.lang = language;
 
     recognitionRef.current.onstart = () => {
       console.log("Speech recognition started");
+      isListeningRef.current = true;
+      setIsListening(true);
     };
 
     recognitionRef.current.onresult = (event: any) => {
       console.log("Speech recognition result:", event.results);
-      let allFinalText = "";
-      let interimText = "";
-
-      for (let i = 0; i < event.results.length; i++) {
+      
+      // Only process new results (results we haven't seen yet)
+      for (let i = lastResultIndexRef.current + 1; i < event.results.length; i++) {
         const result = event.results[i];
         if (result.isFinal) {
-          allFinalText += result[0].transcript;
-        } else {
-          interimText += result[0].transcript;
-        }
-      }
-
-      // Display current state
-      setTranscript(allFinalText + interimText);
-      
-      // Only send NEW final text (compare with what we already sent)
-      if (allFinalText && allFinalText !== lastSentTextRef.current) {
-        const newText = allFinalText.startsWith(lastSentTextRef.current) 
-          ? allFinalText.substring(lastSentTextRef.current.length)
-          : allFinalText;
-        
-        console.log("New text to send:", newText, "Previous:", lastSentTextRef.current);
-        lastSentTextRef.current = allFinalText;
-        
-        if (newText.trim() && onResultRef.current) {
-          onResultRef.current(newText.trim());
+          const finalText = result[0].transcript.trim();
+          console.log("Final result at index", i, ":", finalText);
+          
+          if (finalText && onResultRef.current) {
+            onResultRef.current(finalText);
+          }
+          
+          setTranscript(prev => prev + (prev ? " " : "") + finalText);
+          lastResultIndexRef.current = i;
         }
       }
     };
 
     recognitionRef.current.onerror = (event: any) => {
       console.error("Speech recognition error:", event.error);
+      isListeningRef.current = false;
       setIsListening(false);
       
-      if (onErrorRef.current) {
+      // Don't show error for no-speech as it's common
+      if (event.error !== "no-speech" && onErrorRef.current) {
         const errorMessages: Record<string, string> = {
           "not-allowed": "Microphone access denied. Please allow microphone permissions.",
-          "no-speech": "No speech detected. Please try again.",
           "network": "Network error. Please check your connection.",
           "aborted": "Speech recognition was aborted.",
         };
@@ -106,17 +98,19 @@ export function useSpeechRecognition({
 
     recognitionRef.current.onend = () => {
       console.log("Speech recognition ended");
+      isListeningRef.current = false;
       setIsListening(false);
     };
 
     return () => {
       if (recognitionRef.current) {
         recognitionRef.current.abort();
+        isListeningRef.current = false;
       }
     };
-  }, [isSupported, continuous, language]); // Added language back to reinitialize with correct lang
+  }, [isSupported, continuous]);
 
-  // Update language when it changes
+  // Update language when it changes (without reinitializing)
   useEffect(() => {
     if (recognitionRef.current) {
       recognitionRef.current.lang = language;
@@ -124,27 +118,35 @@ export function useSpeechRecognition({
   }, [language]);
 
   const startListening = useCallback(() => {
-    console.log("startListening called, recognitionRef:", !!recognitionRef.current, "isListening:", isListening);
-    if (!recognitionRef.current || isListening) return;
+    console.log("startListening called, recognitionRef:", !!recognitionRef.current, "isListeningRef:", isListeningRef.current);
+    
+    // Use ref to prevent double-starts (more reliable than state)
+    if (!recognitionRef.current || isListeningRef.current) {
+      console.log("Skipping start - already listening or no recognition");
+      return;
+    }
     
     // Reset tracking for new session
-    lastSentTextRef.current = "";
+    lastResultIndexRef.current = -1;
     setTranscript("");
+    
     try {
       recognitionRef.current.start();
-      setIsListening(true);
       console.log("Recognition started successfully");
     } catch (error) {
       console.error("Failed to start speech recognition:", error);
+      isListeningRef.current = false;
+      setIsListening(false);
     }
-  }, [isListening]);
+  }, []);
 
   const stopListening = useCallback(() => {
-    if (!recognitionRef.current || !isListening) return;
+    if (!recognitionRef.current || !isListeningRef.current) return;
     
     recognitionRef.current.stop();
+    isListeningRef.current = false;
     setIsListening(false);
-  }, [isListening]);
+  }, []);
 
   return {
     isListening,
