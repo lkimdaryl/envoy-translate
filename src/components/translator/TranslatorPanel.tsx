@@ -2,7 +2,6 @@ import { useRef, useEffect } from "react";
 import { Copy, Volume2, Loader2, Mic, MicOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { LanguageSelector } from "./LanguageSelector";
 import { toast } from "sonner";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { cn } from "@/lib/utils";
@@ -32,7 +31,6 @@ const getRecognitionLanguage = (langCode: string): string => {
 interface TranslatorPanelProps {
   type: "input" | "output";
   language: string;
-  onLanguageChange: (lang: string) => void;
   value: string;
   onChange?: (value: string) => void;
   isLoading?: boolean;
@@ -42,7 +40,6 @@ interface TranslatorPanelProps {
 export function TranslatorPanel({
   type,
   language,
-  onLanguageChange,
   value,
   onChange,
   isLoading = false,
@@ -110,39 +107,30 @@ export function TranslatorPanel({
   };
 
   return (
-    <div className="flex flex-col gap-3 flex-1 min-w-0">
-      <LanguageSelector
-        value={language}
-        onChange={onLanguageChange}
-        label={isOutput ? "Translate to" : "Translate from"}
-      />
-      <div className="relative flex-1 min-h-[150px] md:min-h-[200px]">
+    <div className="flex flex-col gap-2">
+      <div className="relative min-h-[150px] md:min-h-[180px]">
         <Textarea
           ref={textareaRef}
           value={value}
           onChange={onChange ? (e) => onChange(e.target.value) : undefined}
           readOnly={isOutput}
           placeholder={isOutput ? "Translation will appear here..." : "Enter text or use microphone..."}
-          className="h-full min-h-[150px] md:min-h-[200px] resize-none text-base leading-relaxed"
+          className={cn(
+            "h-full min-h-[150px] md:min-h-[180px] resize-none text-base leading-relaxed",
+            isInput && isSupported && "pr-14"
+          )}
           aria-label={isOutput ? "Translated text" : "Text to translate"}
         />
-        {isLoading && isOutput && (
-          <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-md">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-          </div>
-        )}
-      </div>
-      
-      {/* Input panel buttons */}
-      {isInput && isSupported && (
-        <div className="flex gap-2 justify-end">
+        
+        {/* Mic button overlaid inside input textarea */}
+        {isInput && isSupported && (
           <Button
             variant={isListening ? "destructive" : "outline"}
             size="icon"
             onClick={handleMicClick}
             aria-label={isListening ? "Stop recording" : "Start voice input"}
             className={cn(
-              "h-10 w-10 transition-all",
+              "absolute bottom-3 right-3 h-10 w-10 transition-all",
               isListening && "animate-pulse"
             )}
           >
@@ -152,8 +140,14 @@ export function TranslatorPanel({
               <Mic className="h-4 w-4" />
             )}
           </Button>
-        </div>
-      )}
+        )}
+        
+        {isLoading && isOutput && (
+          <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-md">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
+        )}
+      </div>
 
       {/* Output panel buttons */}
       {isOutput && (

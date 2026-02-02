@@ -1,14 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
-import { ArrowLeftRight, ArrowUpDown, Loader2 } from "lucide-react";
+import { ArrowLeftRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Header } from "./Header";
 import { TranslatorPanel } from "./TranslatorPanel";
+import { LanguageSelector } from "./LanguageSelector";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useTheme } from "@/hooks/useTheme";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 
 const STORAGE_KEYS = {
@@ -19,7 +19,6 @@ const STORAGE_KEYS = {
 
 export function Translator() {
   const { theme, toggleTheme } = useTheme();
-  const isMobile = useIsMobile();
   const { translatedText, isLoading, error, translate } = useTranslation();
 
   // Load saved preferences
@@ -79,7 +78,7 @@ export function Translator() {
     <div className="min-h-screen flex flex-col bg-background transition-colors duration-300">
       <Header theme={theme} onToggleTheme={toggleTheme} />
       
-      <main className="flex-1 p-4 md:p-6 lg:p-8 max-w-6xl mx-auto w-full">
+      <main className="flex-1 p-4 md:p-6 lg:p-8 max-w-2xl mx-auto w-full">
         {/* Auto-translate toggle */}
         <div className="flex items-center gap-3 mb-6 justify-end">
           <Switch
@@ -92,51 +91,48 @@ export function Translator() {
           </Label>
         </div>
 
-        {/* Translation panels */}
-        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
-          {/* Input panel */}
-          <TranslatorPanel
-            type="input"
-            language={fromLang}
-            onLanguageChange={setFromLang}
-            value={inputText}
-            onChange={setInputText}
-            autoFocus
-          />
-
-          {/* Swap button */}
-          <div className="flex lg:flex-col items-center justify-center py-2 lg:py-0">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleSwapLanguages}
-              aria-label="Swap languages"
-              className="h-12 w-12 rounded-full border-2 hover:bg-accent transition-transform hover:scale-105"
-            >
-              {isMobile ? (
-                <ArrowUpDown className="h-5 w-5" />
-              ) : (
-                <ArrowLeftRight className="h-5 w-5" />
-              )}
-            </Button>
+        {/* Language selector row */}
+        <div className="flex items-center gap-3 mb-6">
+          <div className="flex-1">
+            <LanguageSelector
+              value={fromLang}
+              onChange={setFromLang}
+              label="Translate from"
+            />
           </div>
-
-          {/* Output panel */}
-          <TranslatorPanel
-            type="output"
-            language={toLang}
-            onLanguageChange={setToLang}
-            value={translatedText}
-            isLoading={isLoading}
-          />
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleSwapLanguages}
+            aria-label="Swap languages"
+            className="h-11 w-11 rounded-full border-2 hover:bg-accent transition-transform hover:scale-105 shrink-0"
+          >
+            <ArrowLeftRight className="h-4 w-4" />
+          </Button>
+          <div className="flex-1">
+            <LanguageSelector
+              value={toLang}
+              onChange={setToLang}
+              label="Translate to"
+            />
+          </div>
         </div>
 
+        {/* Input panel */}
+        <TranslatorPanel
+          type="input"
+          language={fromLang}
+          value={inputText}
+          onChange={setInputText}
+          autoFocus
+        />
+
         {/* Translate button */}
-        <div className="mt-6">
+        <div className="my-4 flex justify-center">
           <Button
             onClick={handleManualTranslate}
             disabled={!inputText.trim() || isLoading}
-            className="w-full lg:w-auto lg:min-w-[200px] lg:mx-auto lg:flex h-12 text-base font-medium"
+            className="min-w-[200px] h-12 text-base font-medium"
             size="lg"
           >
             {isLoading ? (
@@ -149,6 +145,14 @@ export function Translator() {
             )}
           </Button>
         </div>
+
+        {/* Output panel */}
+        <TranslatorPanel
+          type="output"
+          language={toLang}
+          value={translatedText}
+          isLoading={isLoading}
+        />
       </main>
     </div>
   );
