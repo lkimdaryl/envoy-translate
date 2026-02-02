@@ -24,10 +24,21 @@ export function useSpeechRecognition({
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState("");
   const recognitionRef = useRef<any>(null);
+  
+  // Use refs for callbacks to avoid recreating recognition instance
+  const onResultRef = useRef(onResult);
+  const onErrorRef = useRef(onError);
+  
+  // Keep refs updated
+  useEffect(() => {
+    onResultRef.current = onResult;
+    onErrorRef.current = onError;
+  }, [onResult, onError]);
 
   const isSupported = typeof window !== "undefined" && 
     ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
 
+  // Initialize recognition once
   useEffect(() => {
     if (!isSupported) return;
 
@@ -53,8 +64,8 @@ export function useSpeechRecognition({
       const currentTranscript = finalTranscript || interimTranscript;
       setTranscript(currentTranscript);
       
-      if (finalTranscript && onResult) {
-        onResult(finalTranscript);
+      if (finalTranscript && onResultRef.current) {
+        onResultRef.current(finalTranscript);
       }
     };
 
@@ -62,14 +73,14 @@ export function useSpeechRecognition({
       console.error("Speech recognition error:", event.error);
       setIsListening(false);
       
-      if (onError) {
+      if (onErrorRef.current) {
         const errorMessages: Record<string, string> = {
           "not-allowed": "Microphone access denied. Please allow microphone permissions.",
           "no-speech": "No speech detected. Please try again.",
           "network": "Network error. Please check your connection.",
           "aborted": "Speech recognition was aborted.",
         };
-        onError(errorMessages[event.error] || `Error: ${event.error}`);
+        onErrorRef.current(errorMessages[event.error] || `Error: ${event.error}`);
       }
     };
 
@@ -82,7 +93,7 @@ export function useSpeechRecognition({
         recognitionRef.current.abort();
       }
     };
-  }, [isSupported, language, continuous, onResult, onError]);
+  }, [isSupported, continuous]); // Removed language from deps - handled separately
 
   // Update language when it changes
   useEffect(() => {
