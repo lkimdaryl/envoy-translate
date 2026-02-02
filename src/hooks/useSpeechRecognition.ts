@@ -24,6 +24,7 @@ export function useSpeechRecognition({
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState("");
   const recognitionRef = useRef<any>(null);
+  const processedIndicesRef = useRef<Set<number>>(new Set());
   
   // Use refs for callbacks to avoid recreating recognition instance
   const onResultRef = useRef(onResult);
@@ -58,25 +59,31 @@ export function useSpeechRecognition({
 
     recognitionRef.current.onresult = (event: any) => {
       console.log("Speech recognition result:", event.results);
-      let finalTranscript = "";
+      let newFinalTranscript = "";
       let interimTranscript = "";
 
-      for (let i = event.resultIndex; i < event.results.length; i++) {
+      for (let i = 0; i < event.results.length; i++) {
         const result = event.results[i];
         if (result.isFinal) {
-          finalTranscript += result[0].transcript;
+          // Only process results we haven't seen yet
+          if (!processedIndicesRef.current.has(i)) {
+            newFinalTranscript += result[0].transcript;
+            processedIndicesRef.current.add(i);
+          }
         } else {
           interimTranscript += result[0].transcript;
         }
       }
 
-      const currentTranscript = finalTranscript || interimTranscript;
-      console.log("Transcript:", { final: finalTranscript, interim: interimTranscript, current: currentTranscript });
-      setTranscript(currentTranscript);
+      // Show interim transcript for live feedback
+      const displayTranscript = interimTranscript || newFinalTranscript;
+      console.log("Transcript:", { newFinal: newFinalTranscript, interim: interimTranscript, display: displayTranscript });
+      setTranscript(displayTranscript);
       
-      if (finalTranscript && onResultRef.current) {
-        console.log("Calling onResult with:", finalTranscript);
-        onResultRef.current(finalTranscript);
+      // Only send NEW final transcript to callback
+      if (newFinalTranscript && onResultRef.current) {
+        console.log("Calling onResult with:", newFinalTranscript);
+        onResultRef.current(newFinalTranscript);
       }
     };
 
@@ -118,6 +125,8 @@ export function useSpeechRecognition({
     console.log("startListening called, recognitionRef:", !!recognitionRef.current, "isListening:", isListening);
     if (!recognitionRef.current || isListening) return;
     
+    // Reset tracking for new session
+    processedIndicesRef.current.clear();
     setTranscript("");
     try {
       recognitionRef.current.start();
