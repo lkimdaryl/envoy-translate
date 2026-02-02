@@ -67,8 +67,3 @@ export const languages: Language[] = [
   { code: "km", name: "Khmer" },
   { code: "lo", name: "Lao" },
 ];
-
-export const getLanguageName = (code: string): string => {
-  const language = languages.find((lang) => lang.code === code);
-  return language?.name || code;
-};
