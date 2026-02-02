@@ -9,6 +9,7 @@ interface TranslationResult {
 interface UseTranslationReturn extends TranslationResult {
   translate: (text: string, fromLang: string, toLang: string) => Promise<void>;
   cancelTranslation: () => void;
+  clearTranslation: () => void;
 }
 
 export function useTranslation(): UseTranslationReturn {
@@ -23,6 +24,12 @@ export function useTranslation(): UseTranslationReturn {
       abortControllerRef.current = null;
     }
   }, []);
+
+  const clearTranslation = useCallback(() => {
+    cancelTranslation();
+    setTranslatedText("");
+    setError(null);
+  }, [cancelTranslation]);
 
   const translate = useCallback(
     async (text: string, fromLang: string, toLang: string) => {
@@ -89,5 +96,6 @@ export function useTranslation(): UseTranslationReturn {
     error,
     translate,
     cancelTranslation,
+    clearTranslation,
   };
 }

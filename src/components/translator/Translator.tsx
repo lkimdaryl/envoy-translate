@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { ArrowLeftRight, Loader2 } from "lucide-react";
+import { ArrowLeftRight, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -19,7 +19,7 @@ const STORAGE_KEYS = {
 
 export function Translator() {
   const { theme, toggleTheme } = useTheme();
-  const { translatedText, isLoading, error, translate } = useTranslation();
+  const { translatedText, isLoading, error, translate, clearTranslation } = useTranslation();
 
   // Load saved preferences
   const [fromLang, setFromLang] = useState(() => 
@@ -74,6 +74,11 @@ export function Translator() {
     }
   }, [inputText, fromLang, toLang, translate]);
 
+  const handleClear = useCallback(() => {
+    setInputText("");
+    clearTranslation();
+  }, [clearTranslation]);
+
   return (
     <div className="min-h-screen flex flex-col bg-background transition-colors duration-300">
       <Header theme={theme} onToggleTheme={toggleTheme} />
@@ -127,8 +132,8 @@ export function Translator() {
           autoFocus
         />
 
-        {/* Translate button */}
-        <div className="my-4 flex justify-center">
+        {/* Translate and Clear buttons */}
+        <div className="my-4 flex justify-center gap-3">
           <Button
             onClick={handleManualTranslate}
             disabled={!inputText.trim() || isLoading}
@@ -143,6 +148,16 @@ export function Translator() {
             ) : (
               "Translate"
             )}
+          </Button>
+          <Button
+            onClick={handleClear}
+            variant="outline"
+            disabled={!inputText.trim() && !translatedText}
+            className="h-12 px-4"
+            size="lg"
+          >
+            <X className="h-5 w-5 mr-1" />
+            Clear
           </Button>
         </div>
 
