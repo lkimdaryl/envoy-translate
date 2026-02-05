@@ -1,4 +1,4 @@
-import { Moon, Sun, Languages } from "lucide-react";
+ import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface HeaderProps {
@@ -10,7 +10,7 @@ export function Header({ theme, onToggleTheme }: HeaderProps) {
   return (
     <header className="flex items-center justify-between py-4 px-4 md:px-6 border-b border-border">
       <div className="flex items-center gap-2">
-        <Languages className="h-6 w-6 text-primary" />
+        <img src="/envoy.png" alt="Envoy logo" className="h-8 w-8" />
         <h1 className="text-xl md:text-2xl font-bold text-foreground">Translator</h1>
       </div>
       <Button
