@@ -117,7 +117,7 @@ export function TranslatorPanel({
           placeholder={isOutput ? "Translation will appear here..." : "Enter text or use microphone..."}
           className={cn(
             "h-full min-h-[150px] md:min-h-[180px] resize-none text-base leading-relaxed",
-            isInput && isSupported && "pr-14"
+          (isInput && isSupported) || isOutput ? "pr-14" : ""
           )}
           aria-label={isOutput ? "Translated text" : "Text to translate"}
         />
@@ -142,16 +142,9 @@ export function TranslatorPanel({
           </Button>
         )}
         
-        {isLoading && isOutput && (
-          <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-md">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-          </div>
-        )}
-      </div>
-
-      {/* Output panel buttons */}
+      {/* Copy and speaker buttons overlaid inside output textarea */}
       {isOutput && (
-        <div className="flex gap-2 justify-end">
+        <div className="absolute bottom-3 right-3 flex gap-2">
           <Button
             variant="outline"
             size="icon"
@@ -174,6 +167,13 @@ export function TranslatorPanel({
           </Button>
         </div>
       )}
+      
+        {isLoading && isOutput && (
+          <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-md">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
